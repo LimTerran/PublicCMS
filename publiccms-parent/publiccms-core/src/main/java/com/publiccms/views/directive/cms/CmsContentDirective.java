@@ -1,17 +1,14 @@
 package com.publiccms.views.directive.cms;
 
 import java.io.IOException;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.function.Consumer;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.publiccms.common.base.AbstractTemplateDirective;
-import com.publiccms.common.constants.CommonConstants;
 import com.publiccms.common.handler.RenderHandler;
 import com.publiccms.common.tools.CommonUtils;
 import com.publiccms.common.tools.ExtendUtils;
@@ -35,6 +32,7 @@ public class CmsContentDirective extends AbstractTemplateDirective {
     @Override
     public void execute(RenderHandler handler) throws IOException, Exception {
         Long id = handler.getLong("id");
+        boolean absoluteURL = handler.getBoolean("absoluteURL", true);
         SysSite site = getSite(handler);
         if (CommonUtils.notEmpty(id)) {
             CmsContent entity = service.getEntity(id);
@@ -44,7 +42,7 @@ public class CmsContentDirective extends AbstractTemplateDirective {
                     entity.setClicks(entity.getClicks() + statistics.getClicks());
                     entity.setScores(entity.getScores() + statistics.getScores());
                 }
-                if (handler.getBoolean("absoluteURL", false)) {
+                if (absoluteURL) {
                     templateComponent.initContentUrl(site, entity);
                     templateComponent.initContentCover(site, entity);
                 }
@@ -66,21 +64,28 @@ public class CmsContentDirective extends AbstractTemplateDirective {
             Long[] ids = handler.getLongArray("ids");
             if (CommonUtils.notEmpty(ids)) {
                 List<CmsContent> entityList = service.getEntitys(ids);
-                boolean absoluteURL = handler.getBoolean("absoluteURL", true);
-                entityList.forEach(e -> {
-                    CmsContentStatistics statistics = statisticsComponent.getContentStatistics(e.getId());
-                    if (null != statistics) {
-                        e.setClicks(e.getClicks() + statistics.getClicks());
-                        e.setScores(e.getScores() + statistics.getScores());
-                    }
-                    if (absoluteURL) {
+                Consumer<CmsContent> consumer;
+                if (absoluteURL) {
+                    consumer = e -> {
+                        CmsContentStatistics statistics = statisticsComponent.getContentStatistics(e.getId());
+                        if (null != statistics) {
+                            e.setClicks(e.getClicks() + statistics.getClicks());
+                            e.setScores(e.getScores() + statistics.getScores());
+                        }
                         templateComponent.initContentUrl(site, e);
                         templateComponent.initContentCover(site, e);
-                    }
-                });
-                Map<String, CmsContent> map = entityList.stream().filter(entity -> site.getId() == entity.getSiteId())
-                        .collect(Collectors.toMap(k -> k.getId().toString(), Function.identity(),
-                                CommonConstants.defaultMegerFunction(), LinkedHashMap::new));
+                    };
+                } else {
+                    consumer = e -> {
+                        CmsContentStatistics statistics = statisticsComponent.getContentStatistics(e.getId());
+                        if (null != statistics) {
+                            e.setClicks(e.getClicks() + statistics.getClicks());
+                            e.setScores(e.getScores() + statistics.getScores());
+                        }
+                    };
+                }
+                Map<String, CmsContent> map = CommonUtils.listToMap(entityList, k -> k.getId().toString(), consumer,
+                        entity -> site.getId() == entity.getSiteId());
                 handler.put("map", map).render();
             }
         }

@@ -1,17 +1,14 @@
 package com.publiccms.views.directive.cms;
 
 import java.io.IOException;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.function.Consumer;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.publiccms.common.base.AbstractTemplateDirective;
-import com.publiccms.common.constants.CommonConstants;
 import com.publiccms.common.handler.RenderHandler;
 import com.publiccms.common.tools.CommonUtils;
 import com.publiccms.common.tools.ExtendUtils;
@@ -34,6 +31,7 @@ public class CmsCategoryDirective extends AbstractTemplateDirective {
     public void execute(RenderHandler handler) throws IOException, Exception {
         Integer id = handler.getInteger("id");
         String code = handler.getString("code");
+        boolean absoluteURL = handler.getBoolean("absoluteURL", true);
         SysSite site = getSite(handler);
         if (CommonUtils.notEmpty(id) || CommonUtils.notEmpty(code)) {
             CmsCategory entity;
@@ -43,7 +41,7 @@ public class CmsCategoryDirective extends AbstractTemplateDirective {
                 entity = service.getEntityByCode(site.getId(), code);
             }
             if (null != entity && site.getId() == entity.getSiteId()) {
-                if (handler.getBoolean("absoluteURL", false)) {
+                if (absoluteURL) {
                     templateComponent.initCategoryUrl(site, entity);
                 }
                 handler.put("object", entity);
@@ -63,14 +61,14 @@ public class CmsCategoryDirective extends AbstractTemplateDirective {
             Integer[] ids = handler.getIntegerArray("ids");
             if (CommonUtils.notEmpty(ids)) {
                 List<CmsCategory> entityList = service.getEntitys(ids);
-                if (handler.getBoolean("absoluteURL", true)) {
-                    entityList.forEach(e -> {
+                Consumer<CmsCategory> consumer = null;
+                if (absoluteURL) {
+                    consumer = e -> {
                         templateComponent.initCategoryUrl(site, e);
-                    });
+                    };
                 }
-                Map<String, CmsCategory> map = entityList.stream().filter(entity -> site.getId() == entity.getSiteId())
-                        .collect(Collectors.toMap(k -> k.getId().toString(), Function.identity(),
-                                CommonConstants.defaultMegerFunction(), LinkedHashMap::new));
+                Map<String, CmsCategory> map = CommonUtils.listToMap(entityList, k -> k.getId().toString(), consumer,
+                        entity -> site.getId() == entity.getSiteId());
                 handler.put("map", map).render();
             }
         }

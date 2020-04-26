@@ -2,10 +2,12 @@ function addTagType(id,name){
     if(name){
         name=name.trim();
     }
-    if(id&&name){
-        $('.tagsBox',navTab.getCurrentPanel()).append("<span>"+name+" <input type=\"hidden\" name=\"tagTypes[].id\" value=\""+id+"\"/><a href=\"javascript:;\"><i class=\"icon-remove-sign\"></i></a></span>");
+    if(id && name){
+        $box = $('<span></span>').text(name).append('<a href=\"javascript:;\"><i class=\"icon-remove-sign\"></i></a>').append($('<input type=\"hidden\" name=\"tagTypes[].id\"/>').val(id));
+        $('.tagsBox',navTab.getCurrentPanel()).append($box);
     }else if(name){
-        $('.tagsBox',navTab.getCurrentPanel()).append("<span>"+name+" <input type=\"hidden\" name=\"tagTypes[].name\" value=\""+name+"\"/><a href=\"javascript:;\"><i class=\"icon-remove-sign\"></i></a></span>");
+        $box = $('<span></span>').text(name).append('<a href=\"javascript:;\"><i class=\"icon-remove-sign\"></i></a>').append($('<input type=\"hidden\" name=\"tagTypes[].name\"/>').val(name));
+        $('.tagsBox',navTab.getCurrentPanel()).append($box);
     }
     reIndexTagType();
     $('input[name=\'type[].id\']',navTab.getCurrentPanel()).val('');
@@ -20,14 +22,32 @@ function reIndexTagType(){
         $('input[name$=\\.name]',this).attr('name','tagTypes['+tagIndex+'].name');
     });
 }
-function addTag(typeId,id,name){
+function addCategory(id, name, contentId){
     if(name){
         name=name.trim();
     }
-    if(id&&name){
-        $('.tags_'+typeId,navTab.getCurrentPanel()).append("<span>"+name+" <input type=\"hidden\" name=\"tags[].id\" value=\""+id+"\"/><a href=\"javascript:;\"><i class=\"icon-remove-sign\"></i></a></span>");
+    if(id && name && 0==$('.categoryIds input[name=categoryIds][value='+id+']',navTab.getCurrentPanel()).length){
+        $box = $('<span></span>').text(name).append('<a href=\"javascript:;\"><i class=\"icon-remove-sign\"></i></a>');
+        if(contentId){
+            $box.append($('<input type=\"hidden\" name=\"contentIds\"/>').val(contentId));
+        }else{
+            $box.append($('<input type=\"hidden\" name=\"categoryIds\"/>').val(id));
+        }
+        $('.categoryIds',navTab.getCurrentPanel()).append($box);
+    }
+    $('input[name=\'quoteCategoryId\']',navTab.getCurrentPanel()).val('');
+    $('input[name=\'categoryName\']',navTab.getCurrentPanel()).val('');
+}
+function addTag(typeId, id, name){
+    if(name){
+        name=name.trim();
+    }
+    if(id && name){
+        $box = $('<span></span>').text(name).append('<a href=\"javascript:;\"><i class=\"icon-remove-sign\"></i></a>').append($('<input type=\"hidden\" name=\"tags[].id\"/>').val(id));
+        $('.tags_'+typeId,navTab.getCurrentPanel()).append($box);
     }else if(name){
-        $('.tags_'+typeId,navTab.getCurrentPanel()).append("<span>"+name+" <input type=\"hidden\" name=\"tags[].name\" value=\""+name+"\"/><input type=\"hidden\" name=\"tags[].typeId\" value=\""+typeId+"\"/><a href=\"javascript:;\"><i class=\"icon-remove-sign\"></i></a></span>");
+        $box = $('<span></span>').text(name).append('<a href=\"javascript:;\"><i class=\"icon-remove-sign\"></i></a>').append($('<input type=\"hidden\" name=\"tags[].name\"/>').val(name)).append($('<input type=\"hidden\" name=\"tags[].typeId\"/>').val(typeId));
+        $('.tags_'+typeId,navTab.getCurrentPanel()).append($box);
     }
     reIndexTag();
     $('input[name=\'tag['+typeId+'].id\']',navTab.getCurrentPanel()).val('');
@@ -87,36 +107,38 @@ function addUser(id,name){
     if(name){
         name=name.trim();
     }
-    if(id&&name){
-        $('.adminIds',navTab.getCurrentPanel()).append("<span>"+name+" <input type=\"hidden\" name=\"adminIds\" value=\""+id+"\"/><a href=\"javascript:;\"><i class=\"icon-remove-sign\"></i></a></span>");
+    if(id && name){
+        $box = $('<span></span>').text(name).append('<a href=\"javascript:;\"><i class=\"icon-remove-sign\"></i></a>').append($('<input type=\"hidden\" name=\"adminIds\"/>').val(id));
+        $('.adminIds',navTab.getCurrentPanel()).append($box);
     }
     $('input[name=\'userId\']',navTab.getCurrentPanel()).val('');
     $('input[name=\'nickName\']',navTab.getCurrentPanel()).val('');
 }
+var apiCounter=0;
 function getApi(base,apisArray,authorizedApis){
-    var i=0;
     for (var api in apisArray){
-        $.ajax({
-            url:base+apisArray[api],
-            type: 'GET',
-            contentType:'application/json; charset=UTF-8',
-            dataType: 'json',
-            success: function (dataList) {
-                $(dataList).each(function(index,data){
-                    var style='';
-                    if('true'==data.needAppToken){
-                        $('.authorizedApis a[data-id='+api+']',navTab.getCurrentPanel()).next().append('<li><a tname="apis" tvalue="'+data.name+'">'+data.name+'</a></li>');
-                    }
-                });
-                if(++i==apisArray.length){
-                    $(".authorizedApis", navTab.getCurrentPanel()).addClass('tree').jTree();
-                    for(authorizedApi in authorizedApis){
-                        $("input[type=checkbox][value="+authorizedApis[authorizedApi]+"]", navTab.getCurrentPanel()).click();
-                    }
-                }
-            }
-        });
+        apiRequest(base,api,apisArray,authorizedApis);
     }
+}
+function apiRequest(base,api,apisArray,authorizedApis){
+    $.ajax({
+        url:base+apisArray[api],
+        dataType: 'json',
+        success: function (dataList) {
+            $(dataList).each(function(index,data){
+                if('true'==data.needAppToken){
+                    $('.authorizedApis a[data-id='+api+']',navTab.getCurrentPanel()).next().append('<li><a tname="apis" tvalue="'+data.name+'">'+data.name+'</a></li>');
+                }
+            });
+            if(++apiCounter==apisArray.length){
+                $(".authorizedApis", navTab.getCurrentPanel()).addClass('tree').jTree();
+                for(authorizedApi in authorizedApis){
+                    $("input[type=checkbox][value="+authorizedApis[authorizedApi]+"]", navTab.getCurrentPanel()).click();
+                }
+                apiCounter=0;
+            }
+        }
+    });
 }
 function command(command,parametersName){
     $('input[name=sqlcommand]',navTab.getCurrentPanel()).val(command);
