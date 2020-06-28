@@ -114,7 +114,7 @@ upstream cms {
         <dt><@t.page 'server_config.tomcat'/>:</dt>
         <dd><textarea class="code" mode="xml">
 &lt;!-- this valve replaces the apparent client remote IP address and hostname and scheme for the request --&gt;
-&lt;Valve className="org.apache.catalina.valves.RemoteIpValve" remoteIpHeader="X-Forwarded-Proto"/&gt;</textarea>
+&lt;Valve className="org.apache.catalina.valves.RemoteIpValve" protocolHeader="X-Forwarded-Proto"/&gt;</textarea>
             <span class="info"><@t.page 'server_config.tomcat_description'/></span>
         </dd>
     </dl>
